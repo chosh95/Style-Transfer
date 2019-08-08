@@ -31,51 +31,54 @@ class PhotoWCT(nn.Module):
         cF4, cpool_idx, cpool1, cpool_idx2, cpool2, cpool_idx3, cpool3 = self.e4(cont_img)
         sF4 = sF4.data.squeeze(0) #(1,channel,weight,height) -> (channel,weight,height)
         cF4 = cF4.data.squeeze(0)
-        csF4 = self.__feature_wct(cF4, sF4, cont_seg, styl_seg,0.1)
+        csF4 = self.__feature_wct(cF4, sF4, cont_seg, styl_seg,0)
         Im4 = self.d4(csF4, cpool_idx, cpool1, cpool_idx2, cpool2, cpool_idx3, cpool3)
 
         cF3, cpool_idx, cpool1, cpool_idx2, cpool2 = self.e3(Im4)
         sF3 = sF3.data.squeeze(0)
         cF3 = cF3.data.squeeze(0)
-        csF3 = self.__feature_wct(cF3, sF3, cont_seg, styl_seg,0.1)
+        csF3 = self.__feature_wct(cF3, sF3, cont_seg, styl_seg,0)
         Im3 = self.d3(csF3, cpool_idx, cpool1, cpool_idx2, cpool2)
 
         cF2, cpool_idx, cpool = self.e2(Im3)
         sF2 = sF2.data.squeeze(0)
         cF2 = cF2.data.squeeze(0)
-        csF2 = self.__feature_wct(cF2, sF2, cont_seg, styl_seg,0.1)
+        csF2 = self.__feature_wct(cF2, sF2, cont_seg, styl_seg,0)
         Im2 = self.d2(csF2, cpool_idx, cpool)
 
-        cF1 = self.e1(Im2)
+        cF1 = self.e1(cont_img)
         sF1 = sF1.data.squeeze(0)
         cF1 = cF1.data.squeeze(0)
-        csF1 = self.__feature_wct(cF1, sF1, cont_seg, styl_seg,0.1)
+        csF1 = self.__feature_wct(cF1, sF1, cont_seg, styl_seg,0)
         Im1 = self.d1(csF1)
 
-
-        s4,cp,cp1,cp2,cpl2,cp3,cpl3 = self.e4(styl_img)
-        sF4 = self.d4(s4,cp,cp1,cp2,cpl2,cp3,cpl3)
-        s3,cp,cp1,cp2,cpl2 = self.e3(sF4)
-        sF3 = self.d3(s3,cp,cp1,cp2,cpl2)
-        s2,cp,cpl = self.e2(sF3)
-        sF2 = self.d2(s2,cp,cpl)
-        s1 = self.e1(sF2)
-        sF1 = self.d1(s1)
-
+        '''
         c4,cp,cp1,cp2,cpl2,cp3,cpl3 = self.e4(cont_img)
-        cF4 = self.d4(c4,cp,cp1,cp2,cpl2,cp3,cpl3)
-        c3,cp,cp1,cp2,cpl2 = self.e3(cF4)
-        cF3 = self.d3(c3,cp,cp1,cp2,cpl2)
-        c2,cp,cpl = self.e2(cF3)
-        cF2 = self.d2(c2,cp,cpl)
-        c1 = self.e1(cF2)
-        cF1 = self.d1(c1)
+        s4,sp,sp1,sp2,spl2,sp3,spl3 = self.e4(styl_img)
+        f4 = (s4 + c4) / 2
+        cF4 = self.d4(f4,cp,cp1,cp2,cpl2,cp3,cpl3)
+        sF4 = self.d4(f4,sp,sp1,sp2,spl2,sp3,spl3)
 
-        sF4 += cF4
-        sF3 += cF3
-        sF2 += cF2
-        sF1 += cF1
-        return sF4, sF3, sF2, sF1, Im1
+        c3,cp,cp1,cp2,cpl2 = self.e3(cF4)
+        s3,sp,sp1,sp2,spl2 = self.e3(sF4)
+        f3 = (s3 + c3) / 2
+        cF3 = self.d3(f3,cp,cp1,cp2,cpl2)
+        sF3 = self.d3(f3,sp,sp1,sp2,spl2)
+
+        c2,cp,cpl = self.e2(cF3)
+        s2,sp,spl = self.e2(sF3)
+        f2 = (s2 + c2) / 2        
+        cF2 = self.d2(f2,cp,cpl)
+        sF2 = self.d2(f2,sp,spl)
+
+
+        c1 = self.e1(cF2)
+        s1 = self.e1(sF2)
+        f1 = (s1 + c1) / 2
+        cF1 = self.d1(f1)
+        sF1 = self.d1(f1)
+        '''
+        return Im1,Im1,Im1,Im1, Im1
 
     def __compute_label_info(self, cont_seg, styl_seg):
         if cont_seg.size == False or styl_seg.size == False:
