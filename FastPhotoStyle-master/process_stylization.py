@@ -119,7 +119,7 @@ def stylization(stylization_module, smoothing_module, content_image_path, style_
             out_img.save(output_image_path)
         else:
             with Timer("Elapsed time in stylization: %f"):
-                sF4,sF3,sF2,sF1, stylized_img = stylization_module.transform(cont_img, styl_img, cont_seg, styl_seg)
+                cFFG, sFFG, stylized_img = stylization_module.transform(cont_img, styl_img, cont_seg, styl_seg)
             if ch != new_ch or cw != new_cw:
                 print("De-resize image: (%d,%d)->(%d,%d)" %(new_cw,new_ch,cw,ch))
                 stylized_img = nn.functional.upsample(stylized_img, size=(ch,cw), mode='bilinear')
@@ -127,16 +127,16 @@ def stylization(stylization_module, smoothing_module, content_image_path, style_
             ndarr = grid.mul(255).clamp(0, 255).byte().permute(1, 2, 0).cpu().numpy()
             out_img = Image.fromarray(ndarr)
 
-            grid4 = utils.make_grid(sF4.data, nrow=1, padding=0)
+            grid4 = utils.make_grid(cFFG.data, nrow=1, padding=0)
             ndarr4 = grid4.mul(255).clamp(0, 255).byte().permute(1, 2, 0).cpu().numpy()
             out_img4 = Image.fromarray(ndarr4)
-            out_img4.save('./results/sF4.png')
+            out_img4.save('./results/cFFG.png')
 
-            grid3 = utils.make_grid(sF3.data, nrow=1, padding=0)
+            grid3 = utils.make_grid(sFFG.data, nrow=1, padding=0)
             ndarr3 = grid3.mul(255).clamp(0, 255).byte().permute(1, 2, 0).cpu().numpy()
             out_img3 = Image.fromarray(ndarr3)
-            out_img3.save('./results/sF3.png')
-
+            out_img3.save('./results/sFFG.png')
+            '''
             grid2 = utils.make_grid(sF2.data, nrow=1, padding=0)
             ndarr2 = grid2.mul(255).clamp(0, 255).byte().permute(1, 2, 0).cpu().numpy()
             out_img2 = Image.fromarray(ndarr2)
@@ -146,7 +146,7 @@ def stylization(stylization_module, smoothing_module, content_image_path, style_
             ndarr1 = grid1.mul(255).clamp(0, 255).byte().permute(1, 2, 0).cpu().numpy()
             out_img1 = Image.fromarray(ndarr1)
             out_img1.save('./results/sF1.png')
-
+            '''
             with Timer("Elapsed time in propagation: %f"):
                 out_img = smoothing_module.process(out_img, cont_pilimg)
 

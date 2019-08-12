@@ -33,7 +33,7 @@ class PhotoWCT(nn.Module):
         cF4 = cF4.data.squeeze(0)
         csF4 = self.__feature_wct(cF4, sF4, cont_seg, styl_seg,0)
         Im4 = self.d4(csF4, cpool_idx, cpool1, cpool_idx2, cpool2, cpool_idx3, cpool3)
-
+        
         cF3, cpool_idx, cpool1, cpool_idx2, cpool2 = self.e3(Im4)
         sF3 = sF3.data.squeeze(0)
         cF3 = cF3.data.squeeze(0)
@@ -49,7 +49,7 @@ class PhotoWCT(nn.Module):
         cF1 = self.e1(cont_img)
         sF1 = sF1.data.squeeze(0)
         cF1 = cF1.data.squeeze(0)
-        csF1 = self.__feature_wct(cF1, sF1, cont_seg, styl_seg,0)
+        cFFG, csF1 = self.__feature_wct(cF1, sF1, cont_seg, styl_seg,0)
         Im1 = self.d1(csF1)
 
         '''
@@ -71,14 +71,13 @@ class PhotoWCT(nn.Module):
         cF2 = self.d2(f2,cp,cpl)
         sF2 = self.d2(f2,sp,spl)
 
-
         c1 = self.e1(cF2)
         s1 = self.e1(sF2)
         f1 = (s1 + c1) / 2
         cF1 = self.d1(f1)
         sF1 = self.d1(f1)
         '''
-        return Im1,Im1,Im1,Im1, Im1
+        return Im1
 
     def __compute_label_info(self, cont_seg, styl_seg):
         if cont_seg.size == False or styl_seg.size == False:
@@ -131,13 +130,13 @@ class PhotoWCT(nn.Module):
                     styl_indi = styl_indi.cuda(0)
 
                 cFFG = torch.index_select(cont_feat_view, 1, cont_indi) #마스크와 인덱스가 같은 픽셀들 선택 c * z
-                sFFG = torch.index_select(styl_feat_view, 1, styl_indi) 
+                sFFG = torch.index_select(styl_feat_view, 1, styl_indi)
                 # print(len(cont_indi)) 
                 # print(len(styl_indi))
                 tmp_target_feature = self.__wct_core(cFFG, sFFG) #실질적인 전환
                 if torch.__version__ >= "0.4.0":
                     # This seems to be a bug in PyTorch 0.4.0 to me.
-                    tmp_target_feature = cont_feat_rate*cFFG + (1-cont_feat_rate)*tmp_target_feature # 원본 : 변환 비율에 맞춰서 저장##############################################################
+                    tmp_target_feature = cont_feat_rate*cFFG + (1-cont_feat_rate)*tmp_target_feature ### 원본 : 변환 비율에 맞춰서 저장##############################################################
                     new_target_feature = torch.transpose(target_feature, 1, 0)
                     new_target_feature.index_copy_(0, cont_indi, \
                             		torch.transpose(tmp_target_feature,1,0))
