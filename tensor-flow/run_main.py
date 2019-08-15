@@ -30,7 +30,7 @@ def parse_args():
     parser.add_argument('--initial_type', type=str, default='content', choices=['random','content','style'], help='The initial image for optimization (notation in the paper : x)')
     parser.add_argument('--max_size', type=int, default=512, help='The maximum width or height of input images')
     parser.add_argument('--content_loss_norm_type', type=int, default=3, choices=[1,2,3], help='Different types of normalization for content loss')
-    parser.add_argument('--num_iter', type=int, default=1000, help='The number of iterations to run')
+    parser.add_argument('--num_iter', type=int, default=100, help='The number of iterations to run')
 
     return check_args(parser.parse_args())
 
@@ -106,6 +106,14 @@ def main():
     content_image = utils.load_image(args.content, max_size=args.max_size)
     style_image = utils.load_image(args.style, shape=(content_image.shape[1],content_image.shape[0]))
 
+############## (w*h*3)으로 입력이 들어와야 가능
+    content_image = np.load('cont.npy')
+    content_image = np.transpose(content_image,(1,2,0))
+  #  content_image = np.expand_dims(content_image,axis=0)
+  #  content_image = np.zeros((256,256,3))
+    print(content_image.shape)
+###########3##
+
     # initial guess for output
     if args.initial_type == 'content':
         init_image = content_image
@@ -121,7 +129,6 @@ def main():
     CONTENT_LAYERS = {}
     for layer, weight in zip(args.content_layers,args.content_layer_weights):
         CONTENT_LAYERS[layer] = weight
-
     # create a map for style layers info
     STYLE_LAYERS = {}
     for layer, weight in zip(args.style_layers, args.style_layer_weights):

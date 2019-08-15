@@ -49,34 +49,9 @@ class PhotoWCT(nn.Module):
         cF1 = self.e1(cont_img)
         sF1 = sF1.data.squeeze(0)
         cF1 = cF1.data.squeeze(0)
-        cFFG, csF1 = self.__feature_wct(cF1, sF1, cont_seg, styl_seg,0)
+        csF1 = self.__feature_wct(cF1, sF1, cont_seg, styl_seg,0)
         Im1 = self.d1(csF1)
 
-        '''
-        c4,cp,cp1,cp2,cpl2,cp3,cpl3 = self.e4(cont_img)
-        s4,sp,sp1,sp2,spl2,sp3,spl3 = self.e4(styl_img)
-        f4 = (s4 + c4) / 2
-        cF4 = self.d4(f4,cp,cp1,cp2,cpl2,cp3,cpl3)
-        sF4 = self.d4(f4,sp,sp1,sp2,spl2,sp3,spl3)
-
-        c3,cp,cp1,cp2,cpl2 = self.e3(cF4)
-        s3,sp,sp1,sp2,spl2 = self.e3(sF4)
-        f3 = (s3 + c3) / 2
-        cF3 = self.d3(f3,cp,cp1,cp2,cpl2)
-        sF3 = self.d3(f3,sp,sp1,sp2,spl2)
-
-        c2,cp,cpl = self.e2(cF3)
-        s2,sp,spl = self.e2(sF3)
-        f2 = (s2 + c2) / 2        
-        cF2 = self.d2(f2,cp,cpl)
-        sF2 = self.d2(f2,sp,spl)
-
-        c1 = self.e1(cF2)
-        s1 = self.e1(sF2)
-        f1 = (s1 + c1) / 2
-        cF1 = self.d1(f1)
-        sF1 = self.d1(f1)
-        '''
         return Im1
 
     def __compute_label_info(self, cont_seg, styl_seg):

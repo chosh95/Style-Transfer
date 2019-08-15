@@ -64,6 +64,13 @@ def stylization(stylization_module, smoothing_module, content_image_path, style_
         cont_img = Image.open(content_image_path).convert('RGB')
         styl_img = Image.open(style_image_path).convert('RGB')
 
+        '''
+        new_cont = cont_img.crop((120,120,480,600))
+        new_cont.save("cont.jpg")
+        new_styl = styl_img.crop((120,50,480,650))
+        new_styl.save("styl.jpg")
+        '''
+
         new_cw, new_ch = memory_limit_image_resize(cont_img)
         new_sw, new_sh = memory_limit_image_resize(styl_img)
         cont_pilimg = cont_img.copy()
@@ -92,11 +99,49 @@ def stylization(stylization_module, smoothing_module, content_image_path, style_
 
         cont_seg = np.asarray(cont_seg)
         styl_seg = np.asarray(styl_seg)
+
+##########################
+        cont = cont_img.squeeze(0)
+        max_label = np.max(cont_seg) + 1 #label 개수
+        label_set = np.unique(cont_seg) #[0,1,2,..]
+
+        cont_c, cont_h, cont_w = cont.size(0), cont.size(1), cont.size(2)      # 3,h,w  
+        '''   
+        for i in range(0,cont_c):
+            for j in range(0,cont_h):
+                for k in range(0,cont_w):
+                    if cont_seg[j][k]==0:
+                        cont[i][j][k] = 255
+        print(cont.shape)   
+
+        cont = Image.open(content_image_path).convert('RGB')
+        cont = np.asarray(cont)
+        cont = np.transpose(cont,(1,2,0))
+        img = Image.fromarray(cont,'RGB')
+        img.save('cont.jpg') 
+        '''
+        cont_view = cont.view(cont_c, -1).clone() # 3차원을 2차원으로 조정 3 x w*h
+        print(cont_view.shape)
+
+        for l in label_set:
+            cont_mask = np.where(cont_seg.reshape(cont_seg.shape[0] * cont_seg.shape[1]) == l) #l과 label값이 같은 곳의 위치 저장하는 배열
+            cont_indi = torch.LongTensor(cont_mask[0]) #마스크를 long으로 자료형 변환 #(1,z<=x*y)
+            cont_indi = cont_indi.cuda(0)
+            cont = torch.index_select(cont_view, 1, cont_indi)
+        print(cont.shape)
+
+        cont = np.asarray(cont)
+        np.save('cont',cont)
+        print(cont.shape)
+        
+
+##########################
+        '''
         if cont_seg_remapping is not None:
             cont_seg = cont_seg_remapping.process(cont_seg)
         if styl_seg_remapping is not None:
             styl_seg = styl_seg_remapping.process(styl_seg)
-
+        
         if save_intermediate:
             with Timer("Elapsed time in stylization: %f"):
                 stylized_img = stylization_module.transform(cont_img, styl_img, cont_seg, styl_seg)
@@ -119,7 +164,7 @@ def stylization(stylization_module, smoothing_module, content_image_path, style_
             out_img.save(output_image_path)
         else:
             with Timer("Elapsed time in stylization: %f"):
-                cFFG, sFFG, stylized_img = stylization_module.transform(cont_img, styl_img, cont_seg, styl_seg)
+                stylized_img = stylization_module.transform(cont_img, styl_img, cont_seg, styl_seg)
             if ch != new_ch or cw != new_cw:
                 print("De-resize image: (%d,%d)->(%d,%d)" %(new_cw,new_ch,cw,ch))
                 stylized_img = nn.functional.upsample(stylized_img, size=(ch,cw), mode='bilinear')
@@ -131,22 +176,7 @@ def stylization(stylization_module, smoothing_module, content_image_path, style_
             ndarr4 = grid4.mul(255).clamp(0, 255).byte().permute(1, 2, 0).cpu().numpy()
             out_img4 = Image.fromarray(ndarr4)
             out_img4.save('./results/cFFG.png')
-
-            grid3 = utils.make_grid(sFFG.data, nrow=1, padding=0)
-            ndarr3 = grid3.mul(255).clamp(0, 255).byte().permute(1, 2, 0).cpu().numpy()
-            out_img3 = Image.fromarray(ndarr3)
-            out_img3.save('./results/sFFG.png')
-            '''
-            grid2 = utils.make_grid(sF2.data, nrow=1, padding=0)
-            ndarr2 = grid2.mul(255).clamp(0, 255).byte().permute(1, 2, 0).cpu().numpy()
-            out_img2 = Image.fromarray(ndarr2)
-            out_img2.save('./results/sF2.png')
-
-            grid1 = utils.make_grid(sF1.data, nrow=1, padding=0)
-            ndarr1 = grid1.mul(255).clamp(0, 255).byte().permute(1, 2, 0).cpu().numpy()
-            out_img1 = Image.fromarray(ndarr1)
-            out_img1.save('./results/sF1.png')
-            '''
+            
             with Timer("Elapsed time in propagation: %f"):
                 out_img = smoothing_module.process(out_img, cont_pilimg)
 
@@ -154,4 +184,5 @@ def stylization(stylization_module, smoothing_module, content_image_path, style_
                 with Timer("Elapsed time in post processing: %f"):
                     out_img = smooth_filter(out_img, cont_pilimg, f_radius=15, f_edge=1e-1)
             out_img.save(output_image_path)
+            '''
 
