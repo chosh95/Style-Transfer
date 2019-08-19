@@ -63,7 +63,7 @@ def stylization(stylization_module, smoothing_module, content_image_path, style_
     with torch.no_grad():
         cont_img = Image.open(content_image_path).convert('RGB')
         styl_img = Image.open(style_image_path).convert('RGB')
-
+        
         '''
         new_cont = cont_img.crop((120,120,480,600))
         new_cont.save("cont.jpg")
@@ -89,6 +89,7 @@ def stylization(stylization_module, smoothing_module, content_image_path, style_
         cont_img = transforms.ToTensor()(cont_img).unsqueeze(0)
         styl_img = transforms.ToTensor()(styl_img).unsqueeze(0)
 
+
         if cuda:
             cont_img = cont_img.cuda(0)
             styl_img = styl_img.cuda(0)
@@ -104,8 +105,14 @@ def stylization(stylization_module, smoothing_module, content_image_path, style_
         cont = cont_img.squeeze(0)
         max_label = np.max(cont_seg) + 1 #label 개수
         label_set = np.unique(cont_seg) #[0,1,2,..]
-
         cont_c, cont_h, cont_w = cont.size(0), cont.size(1), cont.size(2)      # 3,h,w  
+
+        result = Image.open('result.jpg').convert('RGB')
+        result = transforms.ToTensor()(result)
+        result = result.cuda(0)
+        print(result.shape)
+        result = result.view(3,-1).clone()
+        print(result.shape)
         '''   
         for i in range(0,cont_c):
             for j in range(0,cont_h):
@@ -121,18 +128,34 @@ def stylization(stylization_module, smoothing_module, content_image_path, style_
         img.save('cont.jpg') 
         '''
         cont_view = cont.view(cont_c, -1).clone() # 3차원을 2차원으로 조정 3 x w*h
-        print(cont_view.shape)
-
+         
+       
         for l in label_set:
             cont_mask = np.where(cont_seg.reshape(cont_seg.shape[0] * cont_seg.shape[1]) == l) #l과 label값이 같은 곳의 위치 저장하는 배열
             cont_indi = torch.LongTensor(cont_mask[0]) #마스크를 long으로 자료형 변환 #(1,z<=x*y)
             cont_indi = cont_indi.cuda(0)
             cont = torch.index_select(cont_view, 1, cont_indi)
-        print(cont.shape)
+           
+            if l == 1 :    
+                new_cont = torch.transpose(cont_view,1,0)
+                new_cont.index_copy_(0,cont_indi,torch.transpose(result,1,0))
+                cont_view = torch.transpose(new_cont,1,0)
 
+        print(cont_view.shape)
+        cont_view = torch.reshape(cont_view,(761,596,3))
+        cont_view = np.asarray(cont_view)
+        print(cont_view.shape)
+        im = Image.fromarray(cont_view,'RGB')
+        im.save("output.jpg")
+        
+
+
+        cont = torch.reshape(cont,(3,207,937))
         cont = np.asarray(cont)
         np.save('cont',cont)
         print(cont.shape)
+       
+        
         
 
 ##########################
