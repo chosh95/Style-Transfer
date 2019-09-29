@@ -8,6 +8,7 @@ from PIL import Image
 import torch
 import torch.nn as nn
 import torchvision.utils as utils
+import torchvision.transforms as transforms
 from models import VGGEncoder, VGGDecoder
 
 
@@ -23,7 +24,7 @@ class PhotoWCT(nn.Module):
         self.e4 = VGGEncoder(4)
         self.d4 = VGGDecoder(4)
     
-    def transform(self, cont_img, styl_img, cont_seg, styl_seg):
+    def transform(self, cont_img, styl_img, cont_seg, styl_seg,label_weight_list):
         self.__compute_label_info(cont_seg, styl_seg)
 
         sF4, sF3, sF2, sF1 = self.e4.forward_multiple(styl_img)
@@ -31,25 +32,25 @@ class PhotoWCT(nn.Module):
         cF4, cpool_idx, cpool1, cpool_idx2, cpool2, cpool_idx3, cpool3 = self.e4(cont_img)
         sF4 = sF4.data.squeeze(0) #(1,channel,weight,height) -> (channel,weight,height)
         cF4 = cF4.data.squeeze(0)
-        csF4 = self.__feature_wct(cF4, sF4, cont_seg, styl_seg,0)
+        csF4 = self.__feature_wct(cF4, sF4, cont_seg, styl_seg,label_weight_list)
         Im4 = self.d4(csF4, cpool_idx, cpool1, cpool_idx2, cpool2, cpool_idx3, cpool3)
-        
+
         cF3, cpool_idx, cpool1, cpool_idx2, cpool2 = self.e3(Im4)
         sF3 = sF3.data.squeeze(0)
         cF3 = cF3.data.squeeze(0)
-        csF3 = self.__feature_wct(cF3, sF3, cont_seg, styl_seg,0)
+        csF3 = self.__feature_wct(cF3, sF3, cont_seg, styl_seg,label_weight_list)
         Im3 = self.d3(csF3, cpool_idx, cpool1, cpool_idx2, cpool2)
 
         cF2, cpool_idx, cpool = self.e2(Im3)
         sF2 = sF2.data.squeeze(0)
         cF2 = cF2.data.squeeze(0)
-        csF2 = self.__feature_wct(cF2, sF2, cont_seg, styl_seg,0)
+        csF2 = self.__feature_wct(cF2, sF2, cont_seg, styl_seg,label_weight_list)
         Im2 = self.d2(csF2, cpool_idx, cpool)
 
-        cF1 = self.e1(cont_img)
+        cF1 = self.e1(Im2)
         sF1 = sF1.data.squeeze(0)
         cF1 = cF1.data.squeeze(0)
-        csF1 = self.__feature_wct(cF1, sF1, cont_seg, styl_seg,0)
+        csF1 = self.__feature_wct(cF1, sF1, cont_seg, styl_seg,label_weight_list)
         Im1 = self.d1(csF1)
 
         return Im1
@@ -70,7 +71,7 @@ class PhotoWCT(nn.Module):
             self.label_indicator[l] = is_valid(o_cont_mask[0].size, o_styl_mask[0].size)
 	    #조건 부합하는지에 따라 1.0, 0.0 저장
 
-    def __feature_wct(self, cont_feat, styl_feat, cont_seg, styl_seg, cont_feat_rate):
+    def __feature_wct(self, cont_feat, styl_feat, cont_seg, styl_seg, label_weight_list):
         cont_c, cont_h, cont_w = cont_feat.size(0), cont_feat.size(1), cont_feat.size(2)
         styl_c, styl_h, styl_w = styl_feat.size(0), styl_feat.size(1), styl_feat.size(2)
         cont_feat_view = cont_feat.view(cont_c, -1).clone() # 3차원을 2차원으로 조정
@@ -109,9 +110,14 @@ class PhotoWCT(nn.Module):
                 # print(len(cont_indi)) 
                 # print(len(styl_indi))
                 tmp_target_feature = self.__wct_core(cFFG, sFFG) #실질적인 전환
+
                 if torch.__version__ >= "0.4.0":
                     # This seems to be a bug in PyTorch 0.4.0 to me.
-                    tmp_target_feature = cont_feat_rate*cFFG + (1-cont_feat_rate)*tmp_target_feature ### 원본 : 변환 비율에 맞춰서 저장##############################################################
+                    if label_weight_list[l] == 0 :
+                        tmp_target_feature = cFFG
+                    else :
+                        tmp_target_feature = label_weight_list[l]*tmp_target_feature
+#######################################label_weight에 맞춰서 변환정도 조절#######################################
                     new_target_feature = torch.transpose(target_feature, 1, 0)
                     new_target_feature.index_copy_(0, cont_indi, \
                             		torch.transpose(tmp_target_feature,1,0))

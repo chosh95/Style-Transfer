@@ -19,6 +19,7 @@ parser.add_argument('--save_intermediate', action='store_true', default=False)
 parser.add_argument('--fast', action='store_true', default=False)
 parser.add_argument('--no_post', action='store_true', default=False)
 parser.add_argument('--cuda', type=int, default=1, help='Enable CUDA.')
+parser.add_argument('--label_weight', type=float, nargs='+', default=[]) 
 args = parser.parse_args()
 
 # Load model
@@ -44,5 +45,6 @@ process_stylization.stylization(
     output_image_path=args.output_image_path,
     cuda=args.cuda,
     save_intermediate=args.save_intermediate,
-    no_post=args.no_post
+    no_post=args.no_post,
+    label_weight_list=args.label_weight
 )
